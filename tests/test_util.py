@@ -1,7 +1,7 @@
 import unittest
 import io
 
-from util import read_variable_length, get_nibbles, first_bit_and_rest
+from util import read_variable_length_int, get_nibbles, first_bit_and_rest
 
 
 class VariableLengthTest(unittest.TestCase):
@@ -19,7 +19,7 @@ class VariableLengthTest(unittest.TestCase):
 
         for bytes_, correct_number, bytes_read in tests:
             stream = io.BytesIO(bytes_)
-            number = read_variable_length(stream)
+            number = read_variable_length_int(stream)
             self.assertEqual(
                 number,
                 correct_number,

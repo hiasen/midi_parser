@@ -3,7 +3,7 @@ import struct
 import time
 from pprint import pprint
 
-from util import read_variable_length
+from util import read_variable_length_int
 from events import *
 
 
@@ -30,7 +30,7 @@ def parse_track_header(stream):
 
 
 def parse_event(stream, running_status=None):
-    delta_time = read_variable_length(stream)
+    delta_time = read_variable_length_int(stream)
     event = MidiEvent.from_stream(stream, running_status=running_status)
     return delta_time, event
 

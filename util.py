@@ -1,22 +1,22 @@
 """Utility functions for parsing midi events and midi-files."""
 
 
-# Single byte operations.
+# Single byte splitting.
 
 def get_nibbles(byte):
-    """Returns the two nibbles of a byte."""
+    """Returns the two nibbles (4 bits) of a byte."""
     return (byte & 0xf0) >> 4, byte & 0xf
 
 
 def first_bit_and_rest(byte):
-    """Returns the first bit and the last 7 bit of a byte"""
+    """Returns the first bit and the last 7 bits of a byte"""
     return (byte & 0x80) >> 7, byte & 0x7f
 
 
 # Stream operations.
 
 def single_byte_iterator(stream):
-    """Gives one byte at a time from stream."""
+    """Yield one byte at a time from stream."""
     try:
         while True:
             byte, = stream.read(1)
@@ -26,7 +26,7 @@ def single_byte_iterator(stream):
 
 
 def variable_bytes_iterator(stream):
-    """Iterates through a stream giving 7 last bit of a byte
+    """Yields the 7 last bits of each byte in a stream
     if the first bit of the previous byte is set."""
     for first_bit, rest in map(first_bit_and_rest,
                                single_byte_iterator(stream)):
@@ -35,12 +35,30 @@ def variable_bytes_iterator(stream):
             break
 
 
-def read_variable_length(stream):
-    """Reads a variable length byte.
+def seven_bit_numbers_to_int(sequence):
+    """Takes a sequence of 7-bit numbers and return the corresponding integer.
+
+    Assuming a big-endian sequence.
+    """
+    return sum(b << (i*7) for i, b in enumerate(reversed(sequence)))
+
+
+def read_variable_length_int(stream):
+    """Reads a sequence of variable length bytes and gets the integer value.
 
     As specified in the MIDI specification."""
-    ba = list(variable_bytes_iterator(stream))
-    return sum(b << (i*7) for i, b in enumerate(reversed(ba)))
+    return seven_bit_numbers_to_int(list(variable_bytes_iterator(stream)))
+
+
+def read_variable_length_data(stream):
+    """Reads variable length data from midi stream.
+
+    First it reads the length of the data and uses that to read and return the real data.
+    """
+    length = read_variable_length_int(stream)
+    data = stream.read(length)
+    assert len(data) == length
+    return data
 
 
 # Functions for fixing running status on midi channel events
@@ -51,6 +69,7 @@ def is_real_status(status):
 
 
 def has_two_params(status):
+    """Returns true if the status type has two parameters."""
     return not 0xc0 <= status < 0xe0
 
 

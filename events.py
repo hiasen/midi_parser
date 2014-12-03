@@ -38,8 +38,7 @@ class MetaEvent(MidiEvent):
     @classmethod
     def from_stream_and_status(cls, stream, status, running_status=None):
         event_type, = stream.read(1)
-        length = util.read_variable_length(stream)
-        data = stream.read(length)
+        data = util.read_variable_length_data(stream)
         obj = cls(event_type, data)
         obj.status = status
         return obj
@@ -54,8 +53,7 @@ class SysExEvent(MidiEvent):
 
     @classmethod
     def from_stream_and_status(cls, stream, status, running_status=None):
-        length = util.read_variable_length(stream)
-        data = stream.read(length)
+        data = util.read_variable_length_data(stream)
         obj = cls(data)
         obj.status = status
         return obj
