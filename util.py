@@ -1,38 +1,66 @@
 """Utility functions for parsing midi events and midi-files."""
 
 
+# Single byte operations.
+
 def get_nibbles(byte):
     """Returns the two nibbles of a byte."""
     return (byte & 0xf0) >> 4, byte & 0xf
 
 
 def first_bit_and_rest(byte):
-    return bool(byte & 0x80), byte & 0x7f
+    """Returns the first bit and the last 7 bit of a byte"""
+    return (byte & 0x80) >> 7, byte & 0x7f
 
+
+# Stream operations.
 
 def single_byte_iterator(stream):
     """Gives one byte at a time from stream."""
-    byte = stream.read(1)
-    while(len(byte) == 1):
-        yield byte[0]
-        byte = stream.read(1)
+    try:
+        while True:
+            byte, = stream.read(1)
+            yield byte
+    except ValueError:
+        pass
 
 
 def variable_bytes_iterator(stream):
-    """Gives a variable number of bytes.
-
-    Gives next byte if first bit is set."""
-
-    it = single_byte_iterator(stream)
-    first_bit = True
-    while(first_bit):
-        first_bit, byte = first_bit_and_rest(next(it))
-        yield byte
+    """Iterates through a stream giving 7 last bit of a byte
+    if the first bit of the previous byte is set."""
+    for first_bit, rest in map(first_bit_and_rest,
+                               single_byte_iterator(stream)):
+        yield rest
+        if not first_bit:
+            break
 
 
 def read_variable_length(stream):
-    """Reads a variable length bytes.
+    """Reads a variable length byte.
 
-    As spesified in the MIDI spesification."""
+    As specified in the MIDI specification."""
     ba = list(variable_bytes_iterator(stream))
     return sum(b << (i*7) for i, b in enumerate(reversed(ba)))
+
+
+# Functions for fixing running status on midi channel events
+
+def is_real_status(status):
+    """Checks if the status-message is a real status ie. not running status."""
+    return 0x80 <= status < 0xf0
+
+
+def has_two_params(status):
+    return not 0xc0 <= status < 0xe0
+
+
+def get_status_and_params(stream, status, running_status=None):
+    if not is_real_status(status):
+        status, *params = running_status, status
+    else:
+        params = stream.read(1)
+    params = list(params)
+
+    if has_two_params(status):
+        params.extend(stream.read(1))
+    return status, params

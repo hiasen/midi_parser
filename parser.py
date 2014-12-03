@@ -31,7 +31,7 @@ def parse_track_header(stream):
 
 def parse_event(stream, running_status=None):
     delta_time = read_variable_length(stream)
-    event = MidiEvent.from_stream(stream, status=None, running_status=running_status)
+    event = MidiEvent.from_stream(stream, running_status=running_status)
     return delta_time, event
 
 

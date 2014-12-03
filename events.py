@@ -75,21 +75,9 @@ class MidiChannelEvent(MidiEvent):
 
     @classmethod
     def from_stream_and_status(cls, stream, status, running_status=None):
-
-        if 0x80 <= status < 0xf0:  # is real status byte?
-            param, = stream.read(1)
-        else:  # else use the previous status (running_status)
-            param, status = status, running_status
-            print("Running status")
-
-        data = [param]
-
-        # Check if the event type has two parameters
-        if not 0xc0 <= status < 0xe0:
-            data.extend(stream.read(1))
-
+        status, params = util.get_status_and_params(stream, status, running_status)
         event_type, midi_channel = util.get_nibbles(status)
-        return cls(event_type, midi_channel, data)
+        return cls(event_type, midi_channel, params)
 
     def __str__(self):
         return "MidiChannelEvent: {} {} {}".format(self.event_type,
