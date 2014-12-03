@@ -1,39 +1,41 @@
 import unittest
 import io
 
-from util import read_variable_length_int, get_nibbles, first_bit_and_rest
+import util
 
 
 class VariableLengthTest(unittest.TestCase):
+    bytes_to_test = (
+        (b'\x00', 0),
+        (b'\x7f', 0x7f),
+        (b'\x81\x48', 0xc8),
+        (b'\xc0\x80\x00', 0x100000),
+        (b'\xff\xff\xff\x7f', 0x0fffffff),
+    )
 
     def test_read_variable_length(self):
-        tests = (
-            (b'\x00\x00', 0, 1),
-            (b'\x00\xde', 0, 1),
-            (b'\x7f\x11', 0x7f, 1),
-            (b'\x80\x00', 0, 2),
-            (b'\x81\x48', 0xc8, 2),
-            (b'\xc0\x80\x00', 0x100000, 3),
-            (b'\xff\xff\xff\x7f', 0x0fffffff, 4),
-        )
-
-        for bytes_, correct_number, bytes_read in tests:
+        for bytes_, correct_number in self.bytes_to_test:
             stream = io.BytesIO(bytes_)
-            number = read_variable_length_int(stream)
-            self.assertEqual(
-                number,
-                correct_number,
-                "{} not equal {}".format(bytes_, correct_number))
-            self.assertEqual(stream.tell(), bytes_read)
+            number = util.read_variable_length_int(stream)
+            self.assertEqual(number, correct_number,
+                             "{} not equal {}".format(bytes_, correct_number))
+            self.assertEqual(stream.tell(), len(bytes_))
+
+    def test_int_to_variable_length(self):
+        for bytes_, number in self.bytes_to_test:
+            var_bytes = util.int_to_variable_bytes(number)
+            self.assertEqual(var_bytes, bytes_,
+                             "number={}".format(number))
+
 
 
 class BitOperationsTest(unittest.TestCase):
 
     def test_first_bit_and_rest(self):
-        self.assertEqual(first_bit_and_rest(0xff), (1, 127))
-        self.assertEqual(first_bit_and_rest(0x22), (0, 0x22))
+        self.assertEqual(util.first_bit_and_rest(0xff), (1, 127))
+        self.assertEqual(util.first_bit_and_rest(0x22), (0, 0x22))
 
     def test_nibbles(self):
-        self.assertEqual(get_nibbles(0xff), (0xf, 0xf))
-        self.assertEqual(get_nibbles(0x37), (0x3, 0x7))
-        self.assertEqual(get_nibbles(0x00), (0x0, 0x0))
+        self.assertEqual(util.get_nibbles(0xff), (0xf, 0xf))
+        self.assertEqual(util.get_nibbles(0x37), (0x3, 0x7))
+        self.assertEqual(util.get_nibbles(0x00), (0x0, 0x0))

@@ -47,7 +47,7 @@ def read_variable_length_int(stream):
     """Reads a sequence of variable length bytes and gets the integer value.
 
     As specified in the MIDI specification."""
-    return seven_bit_numbers_to_int(list(variable_bytes_iterator(stream)))
+    return seven_bit_numbers_to_int(bytes(variable_bytes_iterator(stream)))
 
 
 def read_variable_length_data(stream):
@@ -59,6 +59,23 @@ def read_variable_length_data(stream):
     data = stream.read(length)
     assert len(data) == length
     return data
+
+
+def seven_bit_iterator(integer):
+    """Iterates through the least significant seven bits of an integer."""
+    while True:
+        yield integer & 0x7f
+        integer >>= 7
+        if not integer:
+            break
+
+
+def int_to_variable_bytes(integer):
+    """Converts an integer to the midi variable length format."""
+    seven_bits = seven_bit_iterator(integer)
+    var_bytes = bytearray([next(seven_bits)])
+    var_bytes.extend(b | 0x80 for b in seven_bits)
+    return bytes(reversed(var_bytes))
 
 
 # Functions for fixing running status on midi channel events
