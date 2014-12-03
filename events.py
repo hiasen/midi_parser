@@ -1,4 +1,4 @@
-from util import read_variable_length, get_nibbles
+import util
 
 
 class MidiEvent(object):
@@ -9,26 +9,26 @@ class MidiEvent(object):
         status, = stream.read(1)
         while(status == 0xf8):  # Filter out MIDI-beat clock
             status, = stream.read(1)
+        return cls.from_stream_and_status(stream, status, running_status)
 
+    @classmethod
+    def from_stream_and_status(cls, stream, status, running_status=None):
         if status == 0xff:
-            event = MetaEvent.from_stream(stream, status)
+            event = MetaEvent.from_stream_and_status(stream, status, None)
         elif status in (0xf0, 0xf7):
-            event = SysExEvent.from_stream(stream, status)
+            event = SysExEvent.from_stream_and_status(stream, status, None)
         else:
-            event = MidiChannelEvent.from_stream(stream,
-                                                 status,
-                                                 running_status)
+            event = MidiChannelEvent.from_stream_and_status(stream, status, running_status)
         return event
 
+
     def __eq__(self, other):
-        return all(getattr(self, attr, None)==getattr(other, attr, None)
-                for attr in self._equality_attributes)
+        return all(getattr(self, attr, None) == getattr(other, attr, None)
+                   for attr in self._equality_attributes)
 
 
 class MetaEvent(MidiEvent):
-
     _equality_attributes = frozenset(('event_type', 'data'))
-
 
     def __init__(self, event_type, data):
         self.event_type = event_type
@@ -36,9 +36,9 @@ class MetaEvent(MidiEvent):
         self.status = 0xff
 
     @classmethod
-    def from_stream(cls, stream, status):
+    def from_stream_and_status(cls, stream, status, running_status=None):
         event_type, = stream.read(1)
-        length = read_variable_length(stream)
+        length = util.read_variable_length(stream)
         data = stream.read(length)
         obj = cls(event_type, data)
         obj.status = status
@@ -53,8 +53,8 @@ class SysExEvent(MidiEvent):
         self.status = status
 
     @classmethod
-    def from_stream(cls, stream, status):
-        length = read_variable_length(stream)
+    def from_stream_and_status(cls, stream, status, running_status=None):
+        length = util.read_variable_length(stream)
         data = stream.read(length)
         obj = cls(data)
         obj.status = status
@@ -62,6 +62,7 @@ class SysExEvent(MidiEvent):
 
 
 class MidiChannelEvent(MidiEvent):
+    _equality_attributes = frozenset(('event_type', 'data', 'channel'))
 
     def __init__(self, event_type, channel, data):
         self.event_type = event_type
@@ -73,7 +74,7 @@ class MidiChannelEvent(MidiEvent):
         return (self.event_type << 4) + self.channel
 
     @classmethod
-    def from_stream(cls, stream, status, running_status=None):
+    def from_stream_and_status(cls, stream, status, running_status=None):
 
         if 0x80 <= status < 0xf0:  # is real status byte?
             param, = stream.read(1)
@@ -87,7 +88,7 @@ class MidiChannelEvent(MidiEvent):
         if not 0xc0 <= status < 0xe0:
             data.extend(stream.read(1))
 
-        event_type, midi_channel = get_nibbles(status)
+        event_type, midi_channel = util.get_nibbles(status)
         return cls(event_type, midi_channel, data)
 
     def __str__(self):

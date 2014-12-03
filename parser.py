@@ -1,10 +1,9 @@
 import sys
 import struct
-import io
 import time
 from pprint import pprint
 
-from util import read_variable_length, get_nibbles
+from util import read_variable_length
 from events import *
 
 
@@ -32,7 +31,7 @@ def parse_track_header(stream):
 
 def parse_event(stream, running_status=None):
     delta_time = read_variable_length(stream)
-    event = MidiEvent.from_stream(stream, running_status=running_status)
+    event = MidiEvent.from_stream(stream, status=None, running_status=running_status)
     return delta_time, event
 
 
@@ -45,7 +44,7 @@ def parse_file():
         stop = track_size + stream.tell()
 
         running_status = None
-        while(stream.tell() < stop):
+        while stream.tell() < stop:
             delta_time, event = parse_event(stream, running_status)
             running_status = event.status
             events.append((delta_time, event))
@@ -56,8 +55,8 @@ def read_midi_keyboard():
     stream = sys.stdin.buffer
     running_status = None
     events = []
-    while(True):
-        event = MidiEvent.from_stream(stream, running_status)
+    while True:
+        event = MidiEvent.from_stream_and_status(stream, running_status, None)
         running_status = event.status
         events.append((time.time(), event))
         print(events[-1])
