@@ -1,7 +1,7 @@
 import unittest
 import io
 
-from events import MetaEvent, SysExEvent, MidiChannelEvent, MidiEvent
+from events import MetaEvent, SysExEvent, ChannelEvent, MidiEvent
 
 
 class MetaEventTest(unittest.TestCase):
@@ -75,7 +75,7 @@ class MidiChannelEventTest(unittest.TestCase):
         self.event_type = 0x8
         self.channel = 0
         self.data = b'\x66\00'
-        self.event = MidiChannelEvent(event_type=self.event_type,
+        self.event = ChannelEvent(event_type=self.event_type,
                                       channel=self.channel,
                                       data=self.data)
         self.bytes = b'\x80\x66\x00'
@@ -88,10 +88,10 @@ class MidiChannelEventTest(unittest.TestCase):
 
     def test_equal(self):
         e1 = self.event
-        e2 = MidiChannelEvent(event_type=e1.event_type,
+        e2 = ChannelEvent(event_type=e1.event_type,
                               channel=e1.channel,
                               data=e1.data)
-        e3 = MidiChannelEvent(event_type=0x9,
+        e3 = ChannelEvent(event_type=0x9,
                               channel=3,
                               data=[1, 2])
         self.assertEqual(e1, e2)
@@ -99,8 +99,8 @@ class MidiChannelEventTest(unittest.TestCase):
 
     def test_create_from_stream(self):
         stream = io.BytesIO(self.bytes)
-        e = MidiChannelEvent.from_stream(stream)
-        e1 = MidiChannelEvent(event_type=self.event_type,
+        e = ChannelEvent.from_stream(stream)
+        e1 = ChannelEvent(event_type=self.event_type,
                               channel=self.channel,
                               data=self.data)
         self.assertEqual(e, e1)
@@ -121,4 +121,4 @@ class MidiEventTest(unittest.TestCase):
     def test_from_stream_created_channel_event(self):
         stream = io.BytesIO(b'\x80\x03\x02\x11\x22')
         e = MidiEvent.from_stream(stream)
-        self.assertIsInstance(e, MidiChannelEvent)
+        self.assertIsInstance(e, ChannelEvent)
