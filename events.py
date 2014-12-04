@@ -1,7 +1,9 @@
+import io
 import util
 
 
 class MidiEvent(object):
+    """Abstract base class for all Midi events"""
     _equality_attributes = frozenset()
 
     @classmethod
@@ -21,10 +23,18 @@ class MidiEvent(object):
             event = MidiChannelEvent.from_stream_and_status(stream, status, running_status)
         return event
 
-
     def __eq__(self, other):
         return all(getattr(self, attr, None) == getattr(other, attr, None)
                    for attr in self._equality_attributes)
+
+    def write_to(self, stream):
+        raise NotImplementedError("MidiEvent is an abstract class")
+
+    def serialize(self):
+        with  io.BytesIO() as stream:
+            self.write_to(stream)
+            return stream.getvalue()
+
 
 
 class MetaEvent(MidiEvent):
@@ -43,6 +53,10 @@ class MetaEvent(MidiEvent):
         obj.status = status
         return obj
 
+    def write_to(self, stream):
+        stream.write(bytes((self.status, self.event_type)))
+        util.write_variable_length_data(stream, self.data)
+
 
 class SysExEvent(MidiEvent):
     _equality_attributes = frozenset(('data',))
@@ -57,6 +71,10 @@ class SysExEvent(MidiEvent):
         obj = cls(data)
         obj.status = status
         return obj
+
+    def write_to(self, stream, running_status=None):
+        stream.write(bytes((self.status, )))
+        util.write_variable_length_data(stream, self.data)
 
 
 class MidiChannelEvent(MidiEvent):
@@ -81,5 +99,10 @@ class MidiChannelEvent(MidiEvent):
         return "MidiChannelEvent: {} {} {}".format(self.event_type,
                                                    self.channel,
                                                    self.data)
+
+    def write_to(self, stream, running_status=None):
+        if running_status != self.status:
+            stream.write(bytes((self.status, )))
+        stream.write(self.data)
 
     __repr__ = __str__

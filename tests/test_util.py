@@ -27,6 +27,18 @@ class VariableLengthTest(unittest.TestCase):
             self.assertEqual(var_bytes, bytes_,
                              "number={}".format(number))
 
+    def test_prepend_length(self):
+        length = 10
+        data = b'\xff' * length
+        my_bytes = util.prepend_length(data)
+        self.assertEqual(my_bytes[1:], data)
+        self.assertEqual(my_bytes[0], length)
+
+        length = 128
+        data = b'\xff' * length
+        my_bytes = util.prepend_length(data)
+        self.assertEqual(my_bytes[2:], data)
+        self.assertEqual(my_bytes[:2], util.int_to_variable_bytes(length))
 
 
 class BitOperationsTest(unittest.TestCase):

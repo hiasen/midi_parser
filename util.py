@@ -78,6 +78,17 @@ def int_to_variable_bytes(integer):
     return bytes(reversed(var_bytes))
 
 
+def prepend_length(data):
+    """Returns the data encoded as a bytes with the length in front"""
+    length_bytes = int_to_variable_bytes(len(data))
+    return length_bytes + data
+
+def write_variable_length_data(stream, data):
+    stream.write(int_to_variable_bytes(len(data)))
+    stream.write(data)
+
+
+
 # Functions for fixing running status on midi channel events
 
 def is_real_status(status):
@@ -95,7 +106,7 @@ def get_status_and_params(stream, status, running_status=None):
         status, *params = running_status, status
     else:
         params = stream.read(1)
-    params = list(params)
+    params = bytearray(params)
 
     if has_two_params(status):
         params.extend(stream.read(1))
