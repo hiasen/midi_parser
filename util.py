@@ -83,10 +83,10 @@ def prepend_length(data):
     length_bytes = int_to_variable_bytes(len(data))
     return length_bytes + data
 
+
 def write_variable_length_data(stream, data):
     stream.write(int_to_variable_bytes(len(data)))
     stream.write(data)
-
 
 
 # Functions for fixing running status on midi channel events

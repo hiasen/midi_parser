@@ -1,7 +1,8 @@
 import unittest
 import io
 
-from events import MetaEvent, SysExEvent, ChannelEvent, MidiEvent
+from events import MetaEvent, SysExEvent, ChannelEvent
+from events.event_factory import MidiEventFactory
 
 
 class MetaEventTest(unittest.TestCase):
@@ -34,7 +35,7 @@ class MetaEventTest(unittest.TestCase):
 
     def test_serialize(self):
         my_bytes = self.event1.serialize()
-        self.assertEqual(my_bytes, self.bytes1)
+        self.assertEqual(my_bytes, self.bytes1, "Serializing: {}".format(self.event1))
 
 
 class SysExEventTest(unittest.TestCase):
@@ -66,7 +67,7 @@ class SysExEventTest(unittest.TestCase):
 
     def test_serialize(self):
         my_bytes = self.event1.serialize()
-        self.assertEqual(my_bytes, self.bytes1)
+        self.assertEqual(my_bytes, self.bytes1, "Serializing: {}".format(self.event1))
 
 
 class MidiChannelEventTest(unittest.TestCase):
@@ -75,9 +76,10 @@ class MidiChannelEventTest(unittest.TestCase):
         self.event_type = 0x8
         self.channel = 0
         self.data = b'\x66\00'
-        self.event = ChannelEvent(event_type=self.event_type,
-                                      channel=self.channel,
-                                      data=self.data)
+        self.event = ChannelEvent.instantiate_subclass(
+            event_type=self.event_type,
+            channel=self.channel,
+            params=self.data)
         self.bytes = b'\x80\x66\x00'
 
     def test_create_event(self):
@@ -88,37 +90,40 @@ class MidiChannelEventTest(unittest.TestCase):
 
     def test_equal(self):
         e1 = self.event
-        e2 = ChannelEvent(event_type=e1.event_type,
-                              channel=e1.channel,
-                              data=e1.data)
-        e3 = ChannelEvent(event_type=0x9,
-                              channel=3,
-                              data=[1, 2])
+        e2 = ChannelEvent.instantiate_subclass(
+            event_type=e1.event_type,
+            channel=e1.channel,
+            params=e1.data)
+        e3 = ChannelEvent.instantiate_subclass(
+            event_type=0x9,
+            channel=3,
+            params=[1, 2])
         self.assertEqual(e1, e2)
         self.assertNotEqual(e1, e3)
 
     def test_create_from_stream(self):
         stream = io.BytesIO(self.bytes)
         e = ChannelEvent.from_stream(stream)
-        e1 = ChannelEvent(event_type=self.event_type,
-                              channel=self.channel,
-                              data=self.data)
+        e1 = ChannelEvent.instantiate_subclass(
+            event_type=self.event_type,
+            channel=self.channel,
+            params=self.data)
         self.assertEqual(e, e1)
 
 
-class MidiEventTest(unittest.TestCase):
+class MidiEventFactoryTest(unittest.TestCase):
 
     def test_from_stream_created_meta_event(self):
         stream = io.BytesIO(b'\xff\x01\x02\x11\x22')
-        e = MidiEvent.from_stream(stream)
+        e = MidiEventFactory.from_stream(stream)
         self.assertIsInstance(e, MetaEvent)
 
     def test_from_stream_created_sysex_event(self):
         stream = io.BytesIO(b'\xf0\x03\x02\x11\x22')
-        e = MidiEvent.from_stream(stream)
+        e = MidiEventFactory.from_stream(stream)
         self.assertIsInstance(e, SysExEvent)
 
     def test_from_stream_created_channel_event(self):
         stream = io.BytesIO(b'\x80\x03\x02\x11\x22')
-        e = MidiEvent.from_stream(stream)
+        e = MidiEventFactory.from_stream(stream)
         self.assertIsInstance(e, ChannelEvent)
