@@ -47,5 +47,4 @@ class SysExEvent(BaseMidiEvent):
         return self.status == other.status and self.data == other.data
 
     def __repr__(self):
-        return "{}: data={}".format(self.__class__.__name__, self.data)
-
+        return "<{}: data={}>".format(self.__class__.__name__, self.data)

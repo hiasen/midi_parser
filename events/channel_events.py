@@ -2,38 +2,56 @@ from .base import BaseMidiEvent
 import util
 
 
-class ParameterDescriptor:
+class ChannelEventParameter:
 
-    def __init__(self, index):
+    def __init__(self, index=None, name=None):
         self.index = index
+        self.name = name
 
     def __get__(self, instance, cls):
         return instance.data[self.index]
 
     def __set__(self, instance, value):
+        if not isinstance(value, int):
+            raise TypeError("{} has to be an integer".format(self.name))
+        if not 0 <= value <= 127:
+            raise ValueError("{} has to be between 0 and 127".format(self.name))
         instance.data[self.index] = value
 
     def __delete__(self, instance):
         pass
 
 
-class ChannelEventRegistry(type):
-    event_types = {}
+class ParametersMetaClass(type):
     def __new__(mcs, name, bases, namespace):
-        param_list = namespace.get('param_list', [])
-        for i, param in enumerate(param_list):
-            namespace[param] =  ParameterDescriptor(i)
+        param_list = []
+        for key, value in namespace.items():
+            if isinstance(value, ChannelEventParameter) and value.index is None:
+                value.index = len(param_list)
+                value.name = key
+                param_list.append(key)
 
-        new_class = type.__new__(mcs, name, bases, namespace)
+        namespace["param_list"] = param_list
+        return super().__new__(mcs, name, bases, namespace)
+
+
+class EventRegisterMetaClass(type):
+    event_types = {}
+
+    def __new__(mcs, name, bases, namespace):
+        new_class = super().__new__(mcs, name, bases, namespace)
         event_type = namespace.get('event_type', None)
         if event_type is not None:
             mcs.event_types[event_type] = new_class
         return new_class
 
 
-class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventRegistry):
-    param_list = ('param1', 'param2')
-    event_type = None
+class ChannelEventMetaClass(ParametersMetaClass, EventRegisterMetaClass):
+    pass
+
+
+class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventMetaClass):
+    Parameter = ChannelEventParameter
 
     def __init__(self, channel, data):
         self.channel = channel
@@ -41,7 +59,7 @@ class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventRegistry):
 
     @classmethod
     def instantiate_subclass(cls, event_type, channel, params):
-        class_to_use = ChannelEventRegistry.event_types.get(event_type)
+        class_to_use = cls.event_types.get(event_type)
         return class_to_use(channel, params)
 
     @property
@@ -55,13 +73,13 @@ class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventRegistry):
         return cls.instantiate_subclass(event_type, channel, params)
 
     def __repr__(self):
-        param_string = ", ".join("{}={}".format(param, self.__getattribute__(param))
-                                for param in self.param_list)
-        return "{}: channel={}, {}".format(self.__class__.__name__, self.channel, param_string)
+        param_string = ", ".join(
+            "{}={}".format(param, self.__getattribute__(param)) for param in self.param_list)
+        return "<{}: channel={}, {}>".format(self.__class__.__name__, self.channel, param_string)
 
     def __eq__(self, other):
         return self.status == other.status\
-               and all(getattr(self, param) == getattr(other, param) for param in self.param_list)
+            and all(getattr(self, param) == getattr(other, param) for param in self.param_list)
 
     def write_to(self, stream, running_status=None):
         if running_status != self.status:
@@ -71,34 +89,39 @@ class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventRegistry):
 
 class NoteOffEvent(ChannelEvent):
     event_type = 0x8
-    param_list = ('note_number', 'velocity')
+    note_number = ChannelEvent.Parameter()
+    velocity = ChannelEvent.Parameter()
 
 
 class NoteOnEvent(ChannelEvent):
     event_type = 0x9
-    param_list = ('note_number', 'velocity')
+    note_number = ChannelEvent.Parameter()
+    velocity = ChannelEvent.Parameter()
 
 
 class NoteAfterTouchEvent(ChannelEvent):
     event_type = 0xA
-    param_list = ('note_number', 'amount')
+    note_number = ChannelEvent.Parameter()
+    amount = ChannelEvent.Parameter()
 
 
 class ControllerEvent(ChannelEvent):
     event_type = 0xB
-    param_list = ('controller_type', 'value')
+    controller_type = ChannelEvent.Parameter()
+    value = ChannelEvent.Parameter()
 
 
 class ProgramChangeEvent(ChannelEvent):
     event_type = 0xC
-    param_list = ('program_number',)
+    program_number = ChannelEvent.Parameter()
 
 
 class ChannelAftertouchEvent(ChannelEvent):
     event_type = 0xD
-    param_list = ('amount',)
+    amount = ChannelEvent.Parameter()
 
 
 class PitchBendEvent(ChannelEvent):
     event_type = 0xE
-    param_list = ('value_lsb', 'value_msb')
+    value_lsb = ChannelEvent.Parameter()
+    value_msb = ChannelEvent.Parameter()
