@@ -76,7 +76,7 @@ class MidiChannelEventTest(unittest.TestCase):
         self.event_type = 0x8
         self.channel = 0
         self.data = b'\x66\00'
-        self.event = ChannelEvent.instantiate_subclass(
+        self.event = ChannelEvent.init_subclass(
             event_type=self.event_type,
             channel=self.channel,
             params=self.data)
@@ -90,11 +90,11 @@ class MidiChannelEventTest(unittest.TestCase):
 
     def test_equal(self):
         e1 = self.event
-        e2 = ChannelEvent.instantiate_subclass(
+        e2 = ChannelEvent.init_subclass(
             event_type=e1.event_type,
             channel=e1.channel,
             params=e1.data)
-        e3 = ChannelEvent.instantiate_subclass(
+        e3 = ChannelEvent.init_subclass(
             event_type=0x9,
             channel=3,
             params=[1, 2])
@@ -104,12 +104,15 @@ class MidiChannelEventTest(unittest.TestCase):
     def test_create_from_stream(self):
         stream = io.BytesIO(self.bytes)
         e = ChannelEvent.from_stream(stream)
-        e1 = ChannelEvent.instantiate_subclass(
+        e1 = ChannelEvent.init_subclass(
             event_type=self.event_type,
             channel=self.channel,
             params=self.data)
         self.assertEqual(e, e1)
 
+
+class ChannelEventRegistry(unittest.TestCase):
+    pass
 
 class MidiEventFactoryTest(unittest.TestCase):
 

@@ -14,3 +14,12 @@ class MidiEventFactory(FromStreamMixin):
         else:
             event_class = ChannelEvent
         return event_class.from_stream_and_status(stream, status, running_status)
+
+
+def event_generator(stream):
+    running_status = None
+    while True:
+        event = MidiEventFactory.from_stream(stream, running_status=running_status)
+        running_status = event.status
+        yield event
+

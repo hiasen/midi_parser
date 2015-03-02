@@ -20,7 +20,9 @@ class MetaEvent(BaseMidiEvent):
         util.write_variable_length_data(stream, self.data)
 
     def __eq__(self, other):
-        return self.status == other.status and self.event_type == other.event_type and self.data == other.data
+        return self.status == other.status \
+               and self.event_type == other.event_type\
+               and self.data == other.data
 
     def __repr__(self):
         return "<{}: event_type={} data={}>".format(self.__class__.__name__, self.event_type, self.data)

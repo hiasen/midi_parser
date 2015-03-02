@@ -1,8 +1,10 @@
+import collections
 from .base import BaseMidiEvent
 import util
 
 
 class ChannelEventParameter:
+    """Descriptor for getting and setting channel event parameters."""
 
     def __init__(self, index=None, name=None):
         self.index = index
@@ -23,6 +25,11 @@ class ChannelEventParameter:
 
 
 class ParametersMetaClass(type):
+
+    @classmethod
+    def __prepare__(metacls, name, bases, **kwargs):
+        return collections.OrderedDict()
+
     def __new__(mcs, name, bases, namespace):
         param_list = []
         for key, value in namespace.items():
@@ -32,10 +39,11 @@ class ParametersMetaClass(type):
                 param_list.append(key)
 
         namespace["param_list"] = param_list
-        return super().__new__(mcs, name, bases, namespace)
+        return super().__new__(mcs, name, bases, dict(namespace))
 
 
 class EventRegisterMetaClass(type):
+    """Metaclass for automatically registering Channel events."""
     event_types = {}
 
     def __new__(mcs, name, bases, namespace):
@@ -58,7 +66,7 @@ class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventMetaClass):
         self.data = data
 
     @classmethod
-    def instantiate_subclass(cls, event_type, channel, params):
+    def init_subclass(cls, event_type, channel, params):
         class_to_use = cls.event_types.get(event_type)
         return class_to_use(channel, params)
 
@@ -70,7 +78,7 @@ class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventMetaClass):
     def from_stream_and_status(cls, stream, status, running_status=None):
         status, params = util.get_status_and_params(stream, status, running_status)
         event_type, channel = util.get_nibbles(status)
-        return cls.instantiate_subclass(event_type, channel, params)
+        return cls.init_subclass(event_type, channel, params)
 
     def __repr__(self):
         param_string = ", ".join(
@@ -89,39 +97,39 @@ class ChannelEvent(BaseMidiEvent, metaclass=ChannelEventMetaClass):
 
 class NoteOffEvent(ChannelEvent):
     event_type = 0x8
-    note_number = ChannelEvent.Parameter()
-    velocity = ChannelEvent.Parameter()
+    note_number = ChannelEventParameter()
+    velocity = ChannelEventParameter()
 
 
 class NoteOnEvent(ChannelEvent):
     event_type = 0x9
-    note_number = ChannelEvent.Parameter()
-    velocity = ChannelEvent.Parameter()
+    note_number = ChannelEventParameter()
+    velocity = ChannelEventParameter()
 
 
 class NoteAfterTouchEvent(ChannelEvent):
     event_type = 0xA
-    note_number = ChannelEvent.Parameter()
-    amount = ChannelEvent.Parameter()
+    note_number = ChannelEventParameter()
+    amount = ChannelEventParameter()
 
 
 class ControllerEvent(ChannelEvent):
     event_type = 0xB
-    controller_type = ChannelEvent.Parameter()
-    value = ChannelEvent.Parameter()
+    controller_type = ChannelEventParameter()
+    value = ChannelEventParameter()
 
 
 class ProgramChangeEvent(ChannelEvent):
     event_type = 0xC
-    program_number = ChannelEvent.Parameter()
+    program_number = ChannelEventParameter()
 
 
 class ChannelAftertouchEvent(ChannelEvent):
     event_type = 0xD
-    amount = ChannelEvent.Parameter()
+    amount = ChannelEventParameter()
 
 
 class PitchBendEvent(ChannelEvent):
     event_type = 0xE
-    value_lsb = ChannelEvent.Parameter()
-    value_msb = ChannelEvent.Parameter()
+    value_lsb = ChannelEventParameter()
+    value_msb = ChannelEventParameter()
